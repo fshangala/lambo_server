@@ -45,7 +45,7 @@ void main() async {
 
           webSocket.listen((message) {
             final messageModel = MessageModel.fromJson(jsonDecode(message));
-            print('Received message: $messageModel');
+            Logger().i("Received message", error: message);
 
             switch (messageModel.eventType) {
               case 'connection':
@@ -57,7 +57,8 @@ void main() async {
             }
 
           }, onDone: () {
-            print('Client disconnected: ${request.connectionInfo?.remoteAddress.address}');
+            lamboRoom?.leave(lamboClientModel);
+            print('Client disconnected: $lamboClientModel');
           }, onError: (error, stackTrace) {
             Logger().e('WebSocket error', error: error, stackTrace: stackTrace);
           }, cancelOnError: true,);

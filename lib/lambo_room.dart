@@ -16,12 +16,9 @@ class LamboRoom {
 
   void leave(LamboClientModel member) {
     try {
-      _members.firstWhere((test) => test.address == member.address);
+      _members.remove(member);
     } on StateError catch(e, stackTrace) {
-      Logger().w('Failed to ');
-    }
-    for (var member in _members) {
-      
+      Logger().w('Failed to remove member from room: $member', error: e, stackTrace: stackTrace);
     }
   }
 
