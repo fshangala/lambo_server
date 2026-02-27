@@ -3,11 +3,13 @@ import 'dart:io';
 class LamboClientModel {
   final String address;
   final String code;
+  final String role;
   final WebSocket webSocket;
 
   LamboClientModel({
     required this.address,
     required this.code,
+    required this.role,
     required this.webSocket,
   });
   
@@ -15,6 +17,7 @@ class LamboClientModel {
     return {
       'address': address,
       'code': code,
+      'role': role,
     };
   }
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:lambo_server/lambo_client_model.dart';
 import 'package:lambo_server/message_model.dart';
 import 'package:logger/logger.dart';
@@ -5,6 +6,7 @@ import 'package:logger/logger.dart';
 class LamboRoom {
   final String code;
   final List<LamboClientModel> _members = [];
+  MessageModel? _lastState;
 
   LamboRoom({
     required this.code,
@@ -12,6 +14,9 @@ class LamboRoom {
 
   void join(LamboClientModel member) {
     _members.add(member);
+    if (member.role == 'slave' && _lastState != null) {
+      member.webSocket.add(jsonEncode(_lastState!.toMap()));
+    }
   }
 
   void leave(LamboClientModel member) {
@@ -22,9 +27,13 @@ class LamboRoom {
     }
   }
 
+  void updateRoomState(MessageModel message) {
+    _lastState = message;
+  }
+
   void sendMessage(MessageModel message) {
     for (var member in _members) {
-      member.webSocket.add(message.toString());
+      member.webSocket.add(jsonEncode(message.toMap()));
     }
   }
 }
