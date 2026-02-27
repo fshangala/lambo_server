@@ -35,25 +35,36 @@ void main() async {
         }
 
         WebSocketTransformer.upgrade(request).then((WebSocket webSocket) {
+          final role = request.uri.queryParameters['role'] ?? 'slave';
           final lamboClientModel = LamboClientModel(
             address: request.connectionInfo!.remoteAddress.address, 
             code: roomCode!,
+            role: role,
             webSocket: webSocket,
           );
           lamboRoom!.join(lamboClientModel);
           print(lamboClientModel);
 
           webSocket.listen((message) {
-            final messageModel = MessageModel.fromJson(jsonDecode(message));
-            Logger().i("Received message", error: message);
+            try {
+              final messageModel = MessageModel.fromJson(jsonDecode(message));
+              Logger().i("Received message: $message");
 
-            switch (messageModel.eventType) {
-              case 'connection':
-                break;
+              switch (messageModel.eventType) {
+                case 'connection':
+                  break;
 
-              default:
-                lamboRoom?.sendMessage(messageModel);
-                break;
+                case 'set_url':
+                  lamboRoom?.updateRoomState(messageModel);
+                  lamboRoom?.sendMessage(messageModel);
+                  break;
+
+                default:
+                  lamboRoom?.sendMessage(messageModel);
+                  break;
+              }
+            } catch (e, s) {
+              Logger().e("Error processing message", error: e, stackTrace: s);
             }
 
           }, onDone: () {
