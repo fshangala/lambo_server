@@ -12,12 +12,22 @@ class MessageModel {
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
-    return MessageModel(
-      eventType: json['event_type'],
-      event: json['event'],
-      args: List<String>.from(json['args']),
-      kwargs: Map<String,dynamic>.from(json['kwargs']),
-    );
+    try {
+      return MessageModel(
+        eventType: json['event_type'] as String? ?? 'default',
+        event: json['event'] as String? ?? '',
+        args: json['args'] != null ? List<String>.from(json['args'] as Iterable) : [],
+        kwargs: json['kwargs'] != null ? Map<String, dynamic>.from(json['kwargs'] as Map) : {},
+      );
+    } catch (e) {
+      throw FormatException('Invalid message format: $e');
+    }
+  }
+
+  void validate() {
+    if (eventType.isEmpty) {
+      throw const FormatException('eventType cannot be empty');
+    }
   }
 
   Map<String, dynamic> toMap() {
