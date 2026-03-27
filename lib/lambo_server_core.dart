@@ -108,7 +108,7 @@ class LamboServer {
       
       _logger.d('Received message in room ${room.code}: $message');
 
-      switch (messageModel.eventType) {
+      switch (messageModel.event) {
         case 'connection':
           // Reserved for future use
           break;
