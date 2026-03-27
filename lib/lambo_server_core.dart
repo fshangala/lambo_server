@@ -20,7 +20,7 @@ class LamboServer {
     final effectivePort = port ?? int.tryParse(Platform.environment['LAMBO_PORT'] ?? '8080') ?? 8080;
 
     _server = await HttpServer.bind(effectiveAddress, effectivePort);
-    _logger.i('Server listening on ws://$effectiveAddress:$effectivePort');
+    print('Server listening on ws://$effectiveAddress:$effectivePort');
 
     await for (HttpRequest request in _server!) {
       _handleRequest(request);
@@ -59,14 +59,14 @@ class LamboServer {
 
       final room = _getOrCreateRoom(roomCode);
       room.join(client);
-      _logger.i('Client connected: $client in room $roomCode');
+      print('Device connected: ${client.address} (${client.role}) in room $roomCode');
 
       webSocket.listen(
         (message) => _onMessage(room, client, message),
         onDone: () {
           _clientMessageTimestamps.remove(client);
           room.leave(client);
-          _logger.i('Client disconnected: $client from room $roomCode');
+          print('Device disconnected: ${client.address} (${client.role}) from room $roomCode');
         },
         onError: (error) {
           _logger.e('WebSocket error for $client', error: error);
@@ -85,7 +85,7 @@ class LamboServer {
         code: code,
         onEmpty: (emptyCode) {
           _rooms.remove(emptyCode);
-          _logger.i('Room cleaned up: $emptyCode');
+          print('Room cleaned up: $emptyCode');
         },
       ),
     );
