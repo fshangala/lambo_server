@@ -74,10 +74,8 @@ ws://<server-ip>:8080/ws/pcautomation/<room-code>?role=<master|slave>
 Messages must be valid JSON strings following this structure:
 ```json
 {
-  "event_type": "string",
   "event": "string",
-  "args": ["array", "of", "strings"],
-  "kwargs": { "key": "value" }
+  "payload": { "key": "value" }
 }
 ```
-- `event_type`: Use `room-state` for messages that should be cached for late joiners.
+- `event`: Use `room-state` for messages that should be cached for late joiners.

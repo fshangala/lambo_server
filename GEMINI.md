@@ -10,10 +10,8 @@ Lambo Server is a Dart-based WebSocket relay server for real-time device synchro
 - **Stateful Synchronization**: The server caches the last "room-state" message in each room. When a new Slave joins, they are immediately updated with this cached state.
 - **Structural Encapsulation**: The core logic is encapsulated in the `LamboServer` class (`lib/lambo_server_core.dart`).
 - **JSON Protocol**: All communication uses the `MessageModel` structure:
-  - `event_type`: Categorizes the message (e.g., `room-state`, `connection`, `default`).
-  - `event`: Specific action or command name.
-  - `args`: Positional arguments.
-  - `kwargs`: Named arguments/data payload.
+  - `event`: Specific action or command name (e.g., `room-state`, `connection`, `default`).
+  - `payload`: Key-value pair data payload related to the event.
 
 ## Core Components
 - `bin/lambo_server.dart`: Entry point. Simple wrapper for `LamboServer`.
@@ -28,7 +26,7 @@ Lambo Server is a Dart-based WebSocket relay server for real-time device synchro
 - **Validation**: Strict regex-based validation for room codes and required message fields.
 
 ## Development Guidelines
-- **Adding Events**: Handle new event types in the `_onMessage` method in `lib/lambo_server_core.dart`.
+- **Adding Events**: Handle new events in the `_onMessage` method in `lib/lambo_server_core.dart`.
 - **Testing**:
   - Run `dart test` for all unit and integration tests.
   - New features MUST include corresponding tests in the `test/` directory.

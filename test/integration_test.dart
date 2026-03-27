@@ -34,18 +34,16 @@ void main() {
     });
 
     final message = MessageModel(
-      eventType: 'test-event',
       event: 'action',
-      args: [],
-      kwargs: {'payload': 'hello'}
+      payload: {'data': 'hello'}
     );
     masterSocket.add(jsonEncode(message.toMap()));
 
     final received = await completer.future.timeout(const Duration(seconds: 2));
     final receivedModel = MessageModel.fromJson(jsonDecode(received));
 
-    expect(receivedModel.eventType, equals('test-event'));
-    expect(receivedModel.kwargs['payload'], equals('hello'));
+    expect(receivedModel.event, equals('action'));
+    expect(receivedModel.payload['data'], equals('hello'));
 
     await masterSocket.close();
     await slaveSocket.close();
@@ -55,10 +53,8 @@ void main() {
     final masterSocket = await WebSocket.connect('$uri?role=master');
 
     final stateMessage = MessageModel(
-      eventType: 'room-state',
-      event: '',
-      args: [],
-      kwargs: {'state': 'ready'}
+      event: 'room-state',
+      payload: {'state': 'ready'}
     );
     masterSocket.add(jsonEncode(stateMessage.toMap()));
 
@@ -74,8 +70,8 @@ void main() {
     final received = await completer.future.timeout(const Duration(seconds: 2));
     final receivedModel = MessageModel.fromJson(jsonDecode(received));
 
-    expect(receivedModel.eventType, equals('room-state'));
-    expect(receivedModel.kwargs['state'], equals('ready'));
+    expect(receivedModel.event, equals('room-state'));
+    expect(receivedModel.payload['state'], equals('ready'));
 
     await masterSocket.close();
     await slaveSocket.close();

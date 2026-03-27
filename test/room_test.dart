@@ -54,7 +54,7 @@ void main() {
       room.join(master);
       room.join(slave);
 
-      final message = MessageModel(eventType: 'test', event: '', args: [], kwargs: {});
+      final message = MessageModel(event: 'test', payload: {});
       room.sendMessage(message);
 
       verify(() => masterSocket.add(any())).called(1);
@@ -66,7 +66,7 @@ void main() {
       room.join(master);
       room.join(slave);
 
-      final message = MessageModel(eventType: 'test', event: '', args: [], kwargs: {});
+      final message = MessageModel(event: 'test', payload: {});
       room.sendMessage(message, excludeSender: master);
 
       verifyNever(() => masterSocket.add(any()));
@@ -75,7 +75,7 @@ void main() {
 
     test('join sends last state to new slaves', () {
       final room = LamboRoom(code: 'room1');
-      final stateMessage = MessageModel(eventType: 'room-state', event: '', args: [], kwargs: {'foo': 'bar'});
+      final stateMessage = MessageModel(event: 'room-state', payload: {'foo': 'bar'});
       room.updateRoomState(stateMessage);
 
       room.join(slave);

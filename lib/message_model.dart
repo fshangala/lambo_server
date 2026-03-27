@@ -1,23 +1,17 @@
 class MessageModel {
-  final String eventType;
   final String event;
-  final List<String> args;
-  final Map<String, dynamic> kwargs;
+  final Map<String, dynamic> payload;
 
   MessageModel({
-    required this.eventType,
     required this.event,
-    required this.args,
-    required this.kwargs,
+    required this.payload,
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     try {
       return MessageModel(
-        eventType: json['event_type'] as String? ?? 'default',
         event: json['event'] as String? ?? '',
-        args: json['args'] != null ? List<String>.from(json['args'] as Iterable) : [],
-        kwargs: json['kwargs'] != null ? Map<String, dynamic>.from(json['kwargs'] as Map) : {},
+        payload: json['payload'] != null ? Map<String, dynamic>.from(json['payload'] as Map) : {},
       );
     } catch (e) {
       throw FormatException('Invalid message format: $e');
@@ -25,17 +19,15 @@ class MessageModel {
   }
 
   void validate() {
-    if (eventType.isEmpty) {
-      throw const FormatException('eventType cannot be empty');
+    if (event.isEmpty) {
+      throw const FormatException('event cannot be empty');
     }
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'event_type': eventType,
       'event': event,
-      'args': args,
-      'kwargs': kwargs,
+      'payload': payload,
     };
   }
 
