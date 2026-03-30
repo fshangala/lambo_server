@@ -20,7 +20,26 @@ class LamboServer {
     final effectivePort = port ?? int.tryParse(Platform.environment['LAMBO_PORT'] ?? '8080') ?? 8080;
 
     _server = await HttpServer.bind(effectiveAddress, effectivePort);
-    print('Server listening on ws://$effectiveAddress:$effectivePort');
+    
+    print('-----------------------------------------');
+    print('Server listening on:');
+    print('  ws://$effectiveAddress:$effectivePort');
+    
+    if (effectiveAddress == '0.0.0.0') {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLinkLocal: false,
+      );
+      
+      for (var interface in interfaces) {
+        for (var addr in interface.addresses) {
+          print('  ws://${addr.address}:$effectivePort');
+        }
+      }
+    }
+    print('-----------------------------------------');
+    print('WebSocket route: /ws/pcautomation/<room-code>?role=<master|slave>');
+    print('-----------------------------------------');
 
     await for (HttpRequest request in _server!) {
       _handleRequest(request);
