@@ -85,4 +85,51 @@ void main() {
       expect(e, anyOf(isA<WebSocketException>(), isA<HttpException>()));
     }
   });
+
+  test('HEAD / returns 200 OK', () async {
+    final client = HttpClient();
+    final request = await client.head('127.0.0.1', port, '/');
+    final response = await request.close();
+    
+    expect(response.statusCode, equals(HttpStatus.ok));
+    client.close();
+  });
+
+  test('POST /api/event/<code>/<event>/ broadcasts to WebSocket', () async {
+    final roomCode = 'http-test-room';
+    final slaveSocket = await WebSocket.connect('ws://127.0.0.1:$port/ws/pcautomation/$roomCode?role=slave');
+    
+    final completer = Completer<String>();
+    slaveSocket.listen((data) {
+      completer.complete(data as String);
+    });
+
+    final client = HttpClient();
+    final request = await client.post('127.0.0.1', port, '/api/event/$roomCode/click');
+    request.headers.contentType = ContentType.json;
+    request.write(jsonEncode({'foo': 'bar'}));
+    final response = await request.close();
+
+    expect(response.statusCode, equals(HttpStatus.ok));
+    
+    final received = await completer.future.timeout(const Duration(seconds: 2));
+    final receivedModel = MessageModel.fromJson(jsonDecode(received));
+
+    expect(receivedModel.event, equals('click'));
+    expect(receivedModel.payload['foo'], equals('bar'));
+
+    await slaveSocket.close();
+    client.close();
+  });
+
+  test('POST to non-existent room returns 404', () async {
+    final client = HttpClient();
+    final request = await client.post('127.0.0.1', port, '/api/event/non-existent-room/click');
+    request.headers.contentType = ContentType.json;
+    request.write(jsonEncode({'foo': 'bar'}));
+    final response = await request.close();
+
+    expect(response.statusCode, equals(HttpStatus.notFound));
+    client.close();
+  });
 }

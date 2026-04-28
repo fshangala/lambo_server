@@ -48,6 +48,19 @@ class LamboServer {
 
   void _handleRequest(HttpRequest request) {
     final path = request.uri.path;
+    final method = request.method;
+
+    if (method == 'HEAD' && path == '/') {
+      request.response
+        ..statusCode = HttpStatus.ok
+        ..close();
+      return;
+    }
+
+    if (method == 'POST' && path.startsWith('/api/event/')) {
+      _handleEventPost(request);
+      return;
+    }
 
     if (WebSocketTransformer.isUpgradeRequest(request) && path.startsWith('/ws/pcautomation/')) {
       final segments = request.uri.pathSegments;
@@ -60,6 +73,48 @@ class LamboServer {
       }
     } else {
       _rejectRequest(request, 'Forbidden: WebSocket connections only');
+    }
+  }
+
+  Future<void> _handleEventPost(HttpRequest request) async {
+    final segments = request.uri.pathSegments;
+    // Expected segments: ['api', 'event', '<code>', '<event>']
+    if (segments.length < 4) {
+      _rejectRequest(request, 'Invalid path', status: HttpStatus.badRequest);
+      return;
+    }
+
+    final roomCode = segments[2];
+    final event = segments[3];
+
+    if (!_roomCodeRegExp.hasMatch(roomCode)) {
+      _rejectRequest(request, 'Invalid room code', status: HttpStatus.badRequest);
+      return;
+    }
+
+    final room = _rooms[roomCode];
+    if (room == null) {
+      _rejectRequest(request, 'Room not found', status: HttpStatus.notFound);
+      return;
+    }
+
+    try {
+      final content = await utf8.decoder.bind(request).join();
+      final Map<String, dynamic> payload = content.isEmpty ? {} : jsonDecode(content) as Map<String, dynamic>;
+      
+      final messageModel = MessageModel(event: event, payload: payload);
+      messageModel.validate();
+
+      room.sendMessage(messageModel);
+      _logger.d('Event "$event" posted to room $roomCode via HTTP POST');
+
+      request.response
+        ..statusCode = HttpStatus.ok
+        ..headers.contentType = ContentType.json
+        ..write(jsonEncode({'status': 'success'}))
+        ..close();
+    } catch (e) {
+      _rejectRequest(request, 'Invalid request: $e', status: HttpStatus.badRequest);
     }
   }
 
@@ -163,9 +218,9 @@ class LamboServer {
     return false;
   }
 
-  void _rejectRequest(HttpRequest request, String reason) {
+  void _rejectRequest(HttpRequest request, String reason, {int status = HttpStatus.forbidden}) {
     request.response
-      ..statusCode = HttpStatus.forbidden
+      ..statusCode = status
       ..write(reason)
       ..close();
   }

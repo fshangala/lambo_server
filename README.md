@@ -13,6 +13,8 @@ Lambo Server is a robust, Dart-based WebSocket relay server designed for real-ti
 - **Reliability & Security**:
     - **Rate Limiting**: Protects the server with a per-client limit (default 50 msg/s).
     - **Validation**: Strict validation for room codes and message structures.
+    - **Reachability Check**: Supports `HEAD /` for quick server status verification.
+- **HTTP Event API**: Trigger events in a room via standard HTTP POST requests.
 - **Docker Ready**: Includes a multi-stage Dockerfile for minimal production images.
 
 ## Getting Started
@@ -79,3 +81,23 @@ Messages must be valid JSON strings following this structure:
 }
 ```
 - `event`: Use `room-state` for messages that should be cached for late joiners.
+
+### HTTP API
+
+#### Reachability Check
+- **Endpoint**: `/`
+- **Method**: `HEAD`
+- **Success Response**: `200 OK`
+
+#### Broadcast Event
+- **Endpoint**: `/api/event/<room-code>/<event-name>`
+- **Method**: `POST`
+- **Body**: JSON payload for the event.
+- **Example**:
+  ```bash
+  curl -X POST http://localhost:8080/api/event/my-room/click -d '{"foo": "bar"}'
+  ```
+- **Responses**:
+    - `200 OK`: Event broadcasted successfully.
+    - `404 Not Found`: Room code does not exist.
+    - `400 Bad Request`: Invalid room code, path, or payload.
