@@ -1,103 +1,43 @@
-# Lambo Server
+# LAMBO Server
 
-Lambo Server is a robust, Dart-based WebSocket relay server designed for real-time device synchronization using a "Master-Slave" architecture. It facilitates seamless communication within isolated "Rooms," where actions from a master device are broadcasted to connected slaves.
+LAMBO Server is a high-performance communication hub designed for real-time synchronization between devices. Using a "Master-Slave" architecture, it allows one device to act as a conductor, instantly broadcasting actions and state changes to all other connected devices in a shared session.
 
-## Features
+## Core Purpose
 
-- **Room-based Connectivity**: Isolated sessions identified by unique room codes.
-- **Master-Slave Relay**: Efficiently broadcasts JSON messages from masters to slaves.
-- **Stateful Sync**: Automatically caches the last "room-state" and delivers it to late-joining slaves.
-- **Automatic Lifecycle Management**: 
-    - **Room Cleanup**: Empty rooms are automatically pruned to reclaim memory.
-    - **Heartbeat**: Built-in ping/pong mechanism to detect and close stale connections.
-- **Reliability & Security**:
-    - **Rate Limiting**: Protects the server with a per-client limit (default 50 msg/s).
-    - **Validation**: Strict validation for room codes and message structures.
-    - **Reachability Check**: Supports `HEAD /` for quick server status verification.
-- **HTTP Event API**: Trigger events in a room via standard HTTP POST requests.
-- **Docker Ready**: Includes a multi-stage Dockerfile for minimal production images.
+The primary use of LAMBO Server is to create "Rooms" where multiple devices can stay in perfect sync. Whether you are building interactive displays, multi-device presentations, or remote-controlled automation systems, LAMBO provides the reliable bridge needed to connect them all.
 
-## Getting Started
+## Key Features
 
-### Prerequisites
+- **Private Rooms**: Devices connect using a unique room code, ensuring your session is isolated and secure.
+- **Instant Synchronization**: Actions performed on a "Master" device are relayed to all "Slave" devices with minimal latency.
+- **Late-Joiner Support**: If a new device joins a room already in progress, it automatically receives the latest "room state" so it can catch up immediately.
+- **Reliable Connections**: Built-in heartbeats monitor device health and automatically clean up disconnected sessions to keep the system responsive.
+- **External Triggers**: Support for standard web requests (HTTP) allows external apps or scripts to trigger events inside a room without needing a persistent connection.
 
-- [Dart SDK](https://dart.dev/get-dart)
-- [Docker](https://www.docker.com/) (optional, for containerized deployment)
+## How It Works
 
-### Installation
+### 1. The Room
+A Room is a virtual space identified by a simple code (like `meeting-room-A` or `exhibit-01`). You choose the code when connecting.
 
-1. Clone the repository.
-2. Install dependencies:
-   ```bash
-   dart pub get
-   ```
+### 2. Roles
+- **Master**: The controller. Usually, there is one Master that sends commands or state updates.
+- **Slave**: The listener. These devices wait for updates from the Master and react accordingly.
 
-### Configuration
+### 3. Synchronization
+The server acts as a relay. It doesn't just pass messages; it remembers the *last known state* of the room. This ensures that every device, no matter when it connects, sees exactly what everyone else sees.
 
-The server can be configured using environment variables:
+## Usage Overview
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LAMBO_HOST` | The host address to bind to | `0.0.0.0` |
-| `LAMBO_PORT` | The port to listen on | `8080` |
+### Connecting Devices
+Devices typically connect via a WebSocket URL. Most client applications compatible with LAMBO will ask for:
+1.  **Server Address**: The IP or Domain where LAMBO is running.
+2.  **Room Code**: Your chosen identifier for the session.
+3.  **Role**: Whether this device should control or follow.
 
-### Running the Server
+### Sending Updates
+Messages sent through the server are structured with an **Event Name** (the action) and a **Payload** (the details).
+*   *Example Event:* `play-video`
+*   *Example Detail:* `{"timestamp": 42.5, "volume": 0.8}`
 
-**Locally:**
-```bash
-dart run bin/lambo_server.dart
-```
-
-**With Docker:**
-```bash
-docker build -t lambo-server .
-docker run -p 8080:8080 -e LAMBO_PORT=8080 lambo-server
-```
-
-## Testing
-
-The project uses the official Dart `test` package. To run all unit and integration tests:
-
-```bash
-dart test
-```
-
-## Protocol
-
-### Connection URL
-Clients connect via WebSocket using the following pattern:
-```
-ws://<server-ip>:8080/ws/pcautomation/<room-code>?role=<master|slave>
-```
-- `<room-code>`: Must match `^[a-zA-Z0-9_-]+$`.
-- `role`: Defaults to `slave` if omitted.
-
-### Message Format
-Messages must be valid JSON strings following this structure:
-```json
-{
-  "event": "string",
-  "payload": { "key": "value" }
-}
-```
-- `event`: Use `room-state` for messages that should be cached for late joiners.
-
-### HTTP API
-
-#### Reachability Check
-- **Endpoint**: `/`
-- **Method**: `HEAD`
-- **Success Response**: `200 OK`
-
-#### Broadcast Event
-- **Endpoint**: `/api/event/<room-code>/<event-name>`
-- **Method**: `POST`
-- **Body**: JSON payload for the event.
-- **Example**:
-  ```bash
-  curl -X POST http://localhost:8080/api/event/my-room/click -d '{"foo": "bar"}'
-  ```
-- **Responses**:
-    - `200 OK`: Event broadcasted successfully.
-    - `404 Not Found`: Room code does not exist.
-    - `400 Bad Request`: Invalid room code, path, or payload.
+## System Health
+The server is designed for high availability and includes automatic protections against data flooding (Rate Limiting) to ensure that one busy device cannot slow down the experience for others in the same room.
