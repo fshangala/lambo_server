@@ -23,7 +23,6 @@ class LamboServer {
     
     print('-----------------------------------------');
     print('Server listening on:');
-    print('  ws://$effectiveAddress:$effectivePort');
     
     if (effectiveAddress == '0.0.0.0') {
       final interfaces = await NetworkInterface.list(
@@ -33,12 +32,15 @@ class LamboServer {
       
       for (var interface in interfaces) {
         for (var addr in interface.addresses) {
-          print('  ws://${addr.address}:$effectivePort');
+          print('  IP:${addr.address}\tPORT:$effectivePort');
         }
       }
+    } else {
+      print('  IP:$effectiveAddress\tPORT:$effectivePort');
     }
     print('-----------------------------------------');
     print('WebSocket route: /ws/pcautomation/<room-code>?role=<master|slave>');
+    print('HTTP route: /api/event/<room-code>/<event-name>');
     print('-----------------------------------------');
 
     await for (HttpRequest request in _server!) {
