@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:lambo_server/lambo_client_model.dart';
 import 'package:lambo_server/message_model.dart';
-import 'package:logger/logger.dart';
+import 'package:lambo_server/logger.dart';
 
 class LamboRoom {
   final String code;
@@ -28,7 +28,7 @@ class LamboRoom {
         onEmpty!(code);
       }
     } on StateError catch(e, stackTrace) {
-      Logger().w('Failed to remove member from room: $member', error: e, stackTrace: stackTrace);
+      L.w('Failed to remove member from room: $member', error: e, stackTrace: stackTrace);
     }
   }
 

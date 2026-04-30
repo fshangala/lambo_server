@@ -5,47 +5,78 @@ import 'package:logger/logger.dart';
 import 'lambo_client_model.dart';
 import 'lambo_room.dart';
 import 'message_model.dart';
+import 'version_provider.dart';
+import 'logger.dart';
 
 class LamboServer {
   final Map<String, LamboRoom> _rooms = {};
   HttpServer? _server;
-  final Logger _logger = Logger();
   
   static final RegExp _roomCodeRegExp = RegExp(r'^[a-zA-Z0-9_-]+$');
   final Map<LamboClientModel, List<DateTime>> _clientMessageTimestamps = {};
   static const int _maxMessagesPerSecond = 50;
 
   Future<void> start({String? address, int? port}) async {
-    final effectiveAddress = address ?? Platform.environment['LAMBO_HOST'] ?? '0.0.0.0';
-    final effectivePort = port ?? int.tryParse(Platform.environment['LAMBO_PORT'] ?? '8080') ?? 8080;
+    final effectiveAddress =
+        address ?? Platform.environment['LAMBO_HOST'] ?? '0.0.0.0';
+    final effectivePort = port ??
+        int.tryParse(Platform.environment['LAMBO_PORT'] ?? '8080') ??
+        8080;
 
     _server = await HttpServer.bind(effectiveAddress, effectivePort);
-    
-    print('-----------------------------------------');
-    print('Server listening on:');
-    
-    if (effectiveAddress == '0.0.0.0') {
-      final interfaces = await NetworkInterface.list(
-        type: InternetAddressType.IPv4,
-        includeLinkLocal: false,
-      );
-      
-      for (var interface in interfaces) {
-        for (var addr in interface.addresses) {
-          print('  IP:${addr.address}\tPORT:$effectivePort');
-        }
-      }
-    } else {
-      print('  IP:$effectiveAddress\tPORT:$effectivePort');
-    }
-    print('-----------------------------------------');
-    print('WebSocket route: /ws/pcautomation/<room-code>?role=<master|slave>');
-    print('HTTP route: /api/event/<room-code>/<event-name>');
-    print('-----------------------------------------');
+
+    await _printBanner();
+    await _printBoxedConfig(effectiveAddress, effectivePort);
+    L.i('Server successfully started and listening.');
 
     await for (HttpRequest request in _server!) {
       _handleRequest(request);
     }
+  }
+
+  Future<void> _printBanner() async {
+    final version = await VersionProvider.getVersion();
+    print('''
+  _        _      __  __  ____    ____  
+ | |      / \\    |  \\/  || __ )  / __ \\ 
+ | |     / _ \\   | |\\/| ||  _ \\ | |  | |
+ | |___ / ___ \\  | |  | || |_) || |__| |
+ |_____/_/   \\_\\ |_|  |_||____/  \\____/ 
+ v$version (Ready)
+''');
+  }
+
+  Future<void> _printBoxedConfig(String address, int port) async {
+    print(' ┌──────────────────────────────────────────────────────────┐');
+    print(' │ LISTENING ADDRESSES                                      │');
+    print(' ├──────────────────────────────────────────────────────────┤');
+
+    if (address == '0.0.0.0') {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLinkLocal: false,
+      );
+
+      for (var interface in interfaces) {
+        for (var addr in interface.addresses) {
+          final label = 'IP: ${addr.address} + PORT: $port';
+          print(' │ ${label.padRight(57)}│');
+        }
+      }
+    } else {
+      final label = 'Address: http://$address:$port';
+      print(' │ ${label.padRight(57)}│');
+    }
+
+    print(' └──────────────────────────────────────────────────────────┘');
+    print('');
+    print(' ┌──────────────────────────────────────────────────────────┐');
+    print(' │ ENDPOINTS                                                │');
+    print(' ├──────────────────────────────────────────────────────────┤');
+    print(' │ WS:   /ws/pcautomation/<room-code>?role=<master|slave>   │');
+    print(' │ HTTP: /api/event/<room-code>/<event-name>                │');
+    print(' └──────────────────────────────────────────────────────────┘');
+    print('');
   }
 
   void _handleRequest(HttpRequest request) {
@@ -70,12 +101,14 @@ class LamboServer {
 
       if (request.connectionInfo != null && roomCode != null && _roomCodeRegExp.hasMatch(roomCode)) {
         _upgradeToWebSocket(request, roomCode);
+        return;
       } else {
         _rejectRequest(request, 'Forbidden: Invalid or missing room code');
+        return;
       }
-    } else {
-      _rejectRequest(request, 'Forbidden: WebSocket connections only');
     }
+    
+    _rejectRequest(request, 'Forbidden: WebSocket connections only');
   }
 
   Future<void> _handleEventPost(HttpRequest request) async {
@@ -108,7 +141,7 @@ class LamboServer {
       messageModel.validate();
 
       room.sendMessage(messageModel);
-      _logger.d('Event "$event" posted to room $roomCode via HTTP POST');
+      L.d('Event "$event" posted to room $roomCode via HTTP POST');
 
       request.response
         ..statusCode = HttpStatus.ok
@@ -135,17 +168,19 @@ class LamboServer {
 
       final room = _getOrCreateRoom(roomCode);
       room.join(client);
-      print('Device connected: ${client.address} (${client.role}) in room $roomCode');
+      L.i(
+          'Device connected: ${client.address} (${client.role.toUpperCase()}) in room $roomCode');
 
       webSocket.listen(
         (message) => _onMessage(room, client, message),
         onDone: () {
           _clientMessageTimestamps.remove(client);
           room.leave(client);
-          print('Device disconnected: ${client.address} (${client.role}) from room $roomCode');
+          L.i(
+              'Device disconnected: ${client.address} (${client.role.toUpperCase()}) from room $roomCode');
         },
         onError: (error) {
-          _logger.e('WebSocket error for $client', error: error);
+          L.e('WebSocket error for $client', error: error);
           _clientMessageTimestamps.remove(client);
           room.leave(client);
         },
@@ -161,7 +196,7 @@ class LamboServer {
         code: code,
         onEmpty: (emptyCode) {
           _rooms.remove(emptyCode);
-          print('Room cleaned up: $emptyCode');
+          L.i('Room cleaned up: $emptyCode');
         },
       ),
     );
@@ -170,19 +205,19 @@ class LamboServer {
   void _onMessage(LamboRoom room, LamboClientModel sender, dynamic message) {
     try {
       if (message is! String) {
-        _logger.w('Received non-string message from ${sender.address}');
+        L.w('Received non-string message from ${sender.address}');
         return;
       }
 
       if (_isRateLimited(sender)) {
-        _logger.w('Rate limit exceeded for ${sender.address}');
+        L.w('Rate limit exceeded for ${sender.address}');
         return;
       }
 
       final messageModel = MessageModel.fromJson(jsonDecode(message));
       messageModel.validate();
       
-      _logger.d('Received message in room ${room.code}: $message');
+      L.d('Received message in room ${room.code}: $message');
 
       switch (messageModel.event) {
         case 'connection':
@@ -201,7 +236,7 @@ class LamboServer {
           break;
       }
     } catch (e, s) {
-      _logger.e('Error processing message from ${sender.address}', error: e, stackTrace: s);
+      L.e('Error processing message from ${sender.address}', error: e, stackTrace: s);
     }
   }
 
@@ -231,6 +266,7 @@ class LamboServer {
     await _server?.close(force: true);
     _rooms.clear();
     _clientMessageTimestamps.clear();
-    _logger.i('Server stopped');
+    L.i('Server stopped');
   }
 }
+
