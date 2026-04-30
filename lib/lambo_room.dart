@@ -1,20 +1,18 @@
 import 'dart:convert';
 import 'package:lambo_server/lambo_client_model.dart';
 import 'package:lambo_server/message_model.dart';
-import 'package:logger/logger.dart';
+import 'package:lambo_server/logger.dart';
 
 class LamboRoom {
   final String code;
   final List<LamboClientModel> _members = [];
   MessageModel? _lastState;
   final void Function(String)? onEmpty;
-  final Logger _logger;
 
   LamboRoom({
     required this.code,
     this.onEmpty,
-    Logger? logger,
-  }) : _logger = logger ?? Logger();
+  });
 
   void join(LamboClientModel member) {
     _members.add(member);
@@ -30,7 +28,7 @@ class LamboRoom {
         onEmpty!(code);
       }
     } on StateError catch(e, stackTrace) {
-      _logger.w('Failed to remove member from room: $member', error: e, stackTrace: stackTrace);
+      L.w('Failed to remove member from room: $member', error: e, stackTrace: stackTrace);
     }
   }
 

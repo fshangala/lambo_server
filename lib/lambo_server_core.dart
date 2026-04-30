@@ -6,11 +6,11 @@ import 'lambo_client_model.dart';
 import 'lambo_room.dart';
 import 'message_model.dart';
 import 'version_provider.dart';
+import 'logger.dart';
 
 class LamboServer {
   final Map<String, LamboRoom> _rooms = {};
   HttpServer? _server;
-  final Logger _logger = Logger(filter: ProductionFilter());
   
   static final RegExp _roomCodeRegExp = RegExp(r'^[a-zA-Z0-9_-]+$');
   final Map<LamboClientModel, List<DateTime>> _clientMessageTimestamps = {};
@@ -27,7 +27,7 @@ class LamboServer {
 
     await _printBanner();
     await _printBoxedConfig(effectiveAddress, effectivePort);
-    _logger.i('Server successfully started and listening.');
+    L.i('Server successfully started and listening.');
 
     await for (HttpRequest request in _server!) {
       _handleRequest(request);
@@ -141,7 +141,7 @@ class LamboServer {
       messageModel.validate();
 
       room.sendMessage(messageModel);
-      _logger.d('Event "$event" posted to room $roomCode via HTTP POST');
+      L.d('Event "$event" posted to room $roomCode via HTTP POST');
 
       request.response
         ..statusCode = HttpStatus.ok
@@ -168,7 +168,7 @@ class LamboServer {
 
       final room = _getOrCreateRoom(roomCode);
       room.join(client);
-      _logger.i(
+      L.i(
           'Device connected: ${client.address} (${client.role.toUpperCase()}) in room $roomCode');
 
       webSocket.listen(
@@ -176,11 +176,11 @@ class LamboServer {
         onDone: () {
           _clientMessageTimestamps.remove(client);
           room.leave(client);
-          _logger.i(
+          L.i(
               'Device disconnected: ${client.address} (${client.role.toUpperCase()}) from room $roomCode');
         },
         onError: (error) {
-          _logger.e('WebSocket error for $client', error: error);
+          L.e('WebSocket error for $client', error: error);
           _clientMessageTimestamps.remove(client);
           room.leave(client);
         },
@@ -194,10 +194,9 @@ class LamboServer {
       code,
       () => LamboRoom(
         code: code,
-        logger: _logger,
         onEmpty: (emptyCode) {
           _rooms.remove(emptyCode);
-          _logger.i('Room cleaned up: $emptyCode');
+          L.i('Room cleaned up: $emptyCode');
         },
       ),
     );
@@ -206,19 +205,19 @@ class LamboServer {
   void _onMessage(LamboRoom room, LamboClientModel sender, dynamic message) {
     try {
       if (message is! String) {
-        _logger.w('Received non-string message from ${sender.address}');
+        L.w('Received non-string message from ${sender.address}');
         return;
       }
 
       if (_isRateLimited(sender)) {
-        _logger.w('Rate limit exceeded for ${sender.address}');
+        L.w('Rate limit exceeded for ${sender.address}');
         return;
       }
 
       final messageModel = MessageModel.fromJson(jsonDecode(message));
       messageModel.validate();
       
-      _logger.d('Received message in room ${room.code}: $message');
+      L.d('Received message in room ${room.code}: $message');
 
       switch (messageModel.event) {
         case 'connection':
@@ -237,7 +236,7 @@ class LamboServer {
           break;
       }
     } catch (e, s) {
-      _logger.e('Error processing message from ${sender.address}', error: e, stackTrace: s);
+      L.e('Error processing message from ${sender.address}', error: e, stackTrace: s);
     }
   }
 
@@ -267,6 +266,7 @@ class LamboServer {
     await _server?.close(force: true);
     _rooms.clear();
     _clientMessageTimestamps.clear();
-    _logger.i('Server stopped');
+    L.i('Server stopped');
   }
 }
+
