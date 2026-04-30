@@ -10,7 +10,7 @@ import 'version_provider.dart';
 class LamboServer {
   final Map<String, LamboRoom> _rooms = {};
   HttpServer? _server;
-  final Logger _logger = Logger();
+  final Logger _logger = Logger(filter: ProductionFilter());
   
   static final RegExp _roomCodeRegExp = RegExp(r'^[a-zA-Z0-9_-]+$');
   final Map<LamboClientModel, List<DateTime>> _clientMessageTimestamps = {};
@@ -194,6 +194,7 @@ class LamboServer {
       code,
       () => LamboRoom(
         code: code,
+        logger: _logger,
         onEmpty: (emptyCode) {
           _rooms.remove(emptyCode);
           _logger.i('Room cleaned up: $emptyCode');

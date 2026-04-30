@@ -8,11 +8,13 @@ class LamboRoom {
   final List<LamboClientModel> _members = [];
   MessageModel? _lastState;
   final void Function(String)? onEmpty;
+  final Logger _logger;
 
   LamboRoom({
     required this.code,
     this.onEmpty,
-  });
+    Logger? logger,
+  }) : _logger = logger ?? Logger();
 
   void join(LamboClientModel member) {
     _members.add(member);
@@ -28,7 +30,7 @@ class LamboRoom {
         onEmpty!(code);
       }
     } on StateError catch(e, stackTrace) {
-      Logger().w('Failed to remove member from room: $member', error: e, stackTrace: stackTrace);
+      _logger.w('Failed to remove member from room: $member', error: e, stackTrace: stackTrace);
     }
   }
 
