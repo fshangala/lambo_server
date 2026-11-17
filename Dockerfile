@@ -11,14 +11,14 @@ RUN dart pub get
 COPY . .
 
 # Compile the server
-RUN dart compile exe bin/lambo_server.dart -o bin/server
+RUN dart compile exe bin/lambo_server.dart -o build/server
 
 # Use a minimal runtime image
 FROM debian:buster-slim
 
 # Copy the compiled binary and required runtime libraries from the build stage
 COPY --from=build /runtime/ /
-COPY --from=build /app/bin/server /app/bin/server
+COPY --from=build /app/build/server /app/bin/server
 
 # Set default environment variables
 ENV LAMBO_HOST=0.0.0.0
